@@ -292,6 +292,46 @@ export const api = {
     overdue: () => request('/payments/overdue'),
     forStudent: (studentId) => request(`/students/${studentId}/payments`),
   },
+
+  // Registration (3-step wizard)
+  registration: {
+    // Get hierarchy for bed picker
+    getHierarchy: () => request('/registration/hierarchy'),
+
+    // Get rooms with beds for a floor
+    getFloorRooms: (floorId) => request(`/registration/floors/${floorId}/rooms`),
+
+    // Step 1: Save biodata
+    step1: (data) =>
+      request('/registration/step1', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    // Step 2: Assign bed
+    step2: (draftId, data) =>
+      request(`/registration/${draftId}/step2`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+
+    // Step 3: Payment and finalize
+    step3: (draftId, data) =>
+      request(`/registration/${draftId}/step3`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+
+    // Get invoice
+    getInvoice: (studentId) => request(`/registration/${studentId}/invoice`),
+
+    // Send invoice email
+    sendInvoice: (studentId, email) =>
+      request(`/registration/${studentId}/send-invoice`, {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+  },
 };
 
 export default api;

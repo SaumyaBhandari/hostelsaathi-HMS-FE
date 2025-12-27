@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import Modal from '../components/Modal';
 import WebcamCapture from '../components/WebcamCapture';
 import StudentProfileModal from '../components/StudentProfileModal';
+import StudentRegistrationWizard from '../components/StudentRegistrationWizard';
 
 // Nepal pricing constants
 const PRICING = {
@@ -18,6 +19,7 @@ export default function Students() {
     const [showModal, setShowModal] = useState(false);
     const [showCheckoutModal, setShowCheckoutModal] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);
+    const [showRegistrationWizard, setShowRegistrationWizard] = useState(false);
     const [showWebcam, setShowWebcam] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -220,7 +222,7 @@ export default function Students() {
                     <h1 className="page-title">Student Management</h1>
                     <p className="page-subtitle">Manage admissions, student records, and checkouts</p>
                 </div>
-                <button className="btn btn-primary" onClick={openAddModal} disabled={vacantBeds.length === 0}>
+                <button className="btn btn-primary" onClick={() => setShowRegistrationWizard(true)}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M12 4v16m8-8H4" />
                     </svg>
@@ -407,6 +409,13 @@ export default function Students() {
                 onClose={() => setShowProfileModal(false)}
                 studentId={selectedStudent?.id}
                 onUpdate={loadData}
+            />
+
+            {/* New Registration Wizard */}
+            <StudentRegistrationWizard
+                isOpen={showRegistrationWizard}
+                onClose={() => setShowRegistrationWizard(false)}
+                onComplete={loadData}
             />
 
             {/* New Admission Modal */}
