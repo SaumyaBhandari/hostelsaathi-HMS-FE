@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Property from './pages/Property';
 import Floors from './pages/Floors';
 import Rooms from './pages/Rooms';
 import Beds from './pages/Beds';
@@ -56,6 +57,7 @@ function App() {
           {/* Protected routes */}
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
+            <Route path="property" element={<Property />} />
             <Route path="floors" element={<Floors />} />
             <Route path="rooms" element={<Rooms />} />
             <Route path="beds" element={<Beds />} />

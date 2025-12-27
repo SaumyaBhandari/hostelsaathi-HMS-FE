@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
+import MapLocationPicker from '../components/MapLocationPicker';
 
 export default function Settings() {
     const [hostel, setHostel] = useState(null);
@@ -88,6 +89,13 @@ export default function Settings() {
                         >
                             Subscription
                         </button>
+                        <button
+                            className={`nav-link ${activeTab === 'location' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('location')}
+                            style={{ width: '100%', textAlign: 'left' }}
+                        >
+                            📍 Location
+                        </button>
                     </div>
                 </div>
 
@@ -101,6 +109,20 @@ export default function Settings() {
                     )}
                     {activeTab === 'subscription' && (
                         <SubscriptionTab hostel={hostel} />
+                    )}
+                    {activeTab === 'location' && (
+                        <LocationTab hostel={hostel} onSave={async (data) => {
+                            setSaving(true);
+                            try {
+                                const updated = await api.hostel.updateLocation(data);
+                                setHostel(updated);
+                                alert('Location updated!');
+                            } catch (err) {
+                                alert(err.message || 'Failed to update location');
+                            } finally {
+                                setSaving(false);
+                            }
+                        }} saving={saving} />
                     )}
                 </div>
             </div>
@@ -370,6 +392,68 @@ function SubscriptionTab({ hostel }) {
                     </p>
                     <button className="btn btn-secondary" style={{ marginTop: '12px' }}>Contact Support</button>
                 </div>
+            </div>
+        </div>
+    );
+}
+
+function LocationTab({ hostel, onSave, saving }) {
+    const [form, setForm] = useState({
+        latitude: hostel.latitude ? parseFloat(hostel.latitude) : null,
+        longitude: hostel.longitude ? parseFloat(hostel.longitude) : null,
+        address_line1: hostel.address_line1 || '',
+        city: hostel.city || '',
+    });
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave(form);
+    };
+
+    return (
+        <div className="card">
+            <div className="card-header">
+                <h3 className="card-title">📍 Hostel Location</h3>
+            </div>
+            <div className="card-body">
+                <form onSubmit={handleSubmit}>
+                    <div className="form-group">
+                        <label className="form-label">Address</label>
+                        <input
+                            type="text"
+                            className="form-input"
+                            value={form.address_line1}
+                            onChange={(e) => setForm({ ...form, address_line1: e.target.value })}
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">City</label>
+                        <input
+                            type="text"
+                            className="form-input"
+                            value={form.city}
+                            onChange={(e) => setForm({ ...form, city: e.target.value })}
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Map Location</label>
+                        <small className="form-hint" style={{ display: 'block', marginBottom: '8px' }}>
+                            Drag the marker or click on the map to set the exact location
+                        </small>
+                        <MapLocationPicker
+                            latitude={form.latitude}
+                            longitude={form.longitude}
+                            onLocationChange={(lat, lng) => setForm({ ...form, latitude: lat, longitude: lng })}
+                            height="350px"
+                        />
+                    </div>
+
+                    <button type="submit" className="btn btn-primary" disabled={saving} style={{ marginTop: '16px' }}>
+                        {saving ? 'Saving...' : 'Save Location'}
+                    </button>
+                </form>
             </div>
         </div>
     );

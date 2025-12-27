@@ -67,6 +67,7 @@ export default function Sidebar() {
 
     const navItems = [
         { to: '/', icon: Icons.Home, label: 'Dashboard' },
+        { to: '/property', icon: Icons.Chart, label: 'Property Overview' },
         { to: '/floors', icon: Icons.Building, label: 'Floors' },
         { to: '/rooms', icon: Icons.Door, label: 'Rooms' },
         { to: '/students', icon: Icons.Users, label: 'Students' },

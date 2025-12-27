@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import Modal from '../components/Modal';
 
@@ -20,14 +20,18 @@ const getFloorPrefix = (floorNumber) => {
 };
 
 export default function Floors() {
+    const [searchParams] = useSearchParams();
     const [floors, setFloors] = useState([]);
+    const [buildings, setBuildings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [editingFloor, setEditingFloor] = useState(null);
+    const [filterBuilding, setFilterBuilding] = useState(searchParams.get('building') || '');
     const [formData, setFormData] = useState({
         floor_number: 0,
         floor_name: '',
+        building_id: '',
         total_toilets: 2,
         total_bathrooms: 2,
         has_common_area: false,
@@ -35,19 +39,36 @@ export default function Floors() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        loadFloors();
+        loadData();
     }, []);
 
-    const loadFloors = async () => {
+    useEffect(() => {
+        // Update filter from URL param
+        const buildingParam = searchParams.get('building');
+        if (buildingParam) setFilterBuilding(buildingParam);
+    }, [searchParams]);
+
+    const loadData = async () => {
         try {
             setError('');
-            const data = await api.floors.list();
-            // Sort by floor number
-            const sortedFloors = data.sort((a, b) => a.floor_number - b.floor_number);
+            const [floorsData, buildingsData] = await Promise.all([
+                api.floors.list(),
+                api.buildings.list().catch(() => []), // Handle if no buildings
+            ]);
+            // Sort floors by building, then floor number
+            const sortedFloors = floorsData.sort((a, b) => {
+                if (a.building_id !== b.building_id) {
+                    if (!a.building_id) return 1;
+                    if (!b.building_id) return -1;
+                    return 0;
+                }
+                return a.floor_number - b.floor_number;
+            });
             setFloors(sortedFloors);
+            setBuildings(buildingsData);
         } catch (err) {
-            console.error('Failed to load floors:', err);
-            setError('Failed to load floors. Please try again.');
+            console.error('Failed to load data:', err);
+            setError('Failed to load data. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -56,15 +77,19 @@ export default function Floors() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
+            const submitData = {
+                ...formData,
+                building_id: formData.building_id || null,
+            };
             if (editingFloor) {
-                await api.floors.update(editingFloor.id, formData);
+                await api.floors.update(editingFloor.id, submitData);
             } else {
-                await api.floors.create(formData);
+                await api.floors.create(submitData);
             }
             setShowModal(false);
             setEditingFloor(null);
             resetForm();
-            loadFloors();
+            loadData();
         } catch (err) {
             setError(err.message || 'Failed to save floor');
         }
@@ -75,6 +100,7 @@ export default function Floors() {
         setFormData({
             floor_number: floor.floor_number,
             floor_name: floor.floor_name || '',
+            building_id: floor.building_id || '',
             total_toilets: floor.total_toilets || 2,
             total_bathrooms: floor.total_bathrooms || 2,
             has_common_area: floor.has_common_area || false,
@@ -83,7 +109,6 @@ export default function Floors() {
     };
 
     const handleManageRooms = (floor) => {
-        // Navigate to rooms page with floor filter
         navigate(`/rooms?floor=${floor.id}`);
     };
 
@@ -91,20 +116,29 @@ export default function Floors() {
         if (!confirm(`Delete ${getFloorDisplayName(floor.floor_number)}? This will also delete all rooms and beds on this floor.`)) return;
         try {
             await api.floors.delete(floor.id);
-            loadFloors();
+            loadData();
         } catch (err) {
             setError(err.message || 'Failed to delete floor');
         }
     };
 
     const resetForm = () => {
+        // Default to selected filter building if available
         setFormData({
-            floor_number: floors.length,
+            floor_number: getNextFloorNumber(),
             floor_name: '',
+            building_id: filterBuilding || '',
             total_toilets: 2,
             total_bathrooms: 2,
             has_common_area: false,
         });
+    };
+
+    const getNextFloorNumber = () => {
+        const relevantFloors = filterBuilding
+            ? floors.filter(f => f.building_id === filterBuilding)
+            : floors;
+        return relevantFloors.length;
     };
 
     const openAddModal = () => {
@@ -112,6 +146,16 @@ export default function Floors() {
         resetForm();
         setShowModal(true);
     };
+
+    const getBuildingName = (buildingId) => {
+        const building = buildings.find(b => b.id === buildingId);
+        return building?.name || 'Unassigned';
+    };
+
+    // Filter floors by selected building
+    const filteredFloors = filterBuilding
+        ? floors.filter(f => f.building_id === filterBuilding)
+        : floors;
 
     if (loading) {
         return <div className="loading"><div className="spinner"></div></div>;
@@ -139,7 +183,35 @@ export default function Floors() {
                 </div>
             )}
 
-            {floors.length === 0 ? (
+            {/* Building Filter */}
+            {buildings.length > 0 && (
+                <div className="filter-bar" style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                    <select
+                        className="form-select"
+                        style={{ width: '250px' }}
+                        value={filterBuilding}
+                        onChange={(e) => setFilterBuilding(e.target.value)}
+                    >
+                        <option value="">All Buildings ({floors.length} floors)</option>
+                        {buildings.map(building => {
+                            const floorCount = floors.filter(f => f.building_id === building.id).length;
+                            return (
+                                <option key={building.id} value={building.id}>
+                                    {building.name} ({floorCount} floors)
+                                </option>
+                            );
+                        })}
+                        <option value="unassigned">Unassigned ({floors.filter(f => !f.building_id).length} floors)</option>
+                    </select>
+                    {filterBuilding && (
+                        <button className="btn btn-ghost btn-sm" onClick={() => setFilterBuilding('')}>
+                            Clear Filter
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {filteredFloors.length === 0 ? (
                 <div className="card">
                     <div className="empty-state">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -152,13 +224,18 @@ export default function Floors() {
                 </div>
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-                    {floors.map((floor) => (
+                    {filteredFloors.map((floor) => (
                         <div key={floor.id} className="floor-card">
                             <div className="floor-card-header">
                                 <div>
                                     <h3 className="floor-card-title">{getFloorDisplayName(floor.floor_number)}</h3>
                                     {floor.floor_name && floor.floor_name !== getFloorDisplayName(floor.floor_number) && (
                                         <span style={{ color: 'var(--gray-500)', fontSize: '14px' }}>{floor.floor_name}</span>
+                                    )}
+                                    {buildings.length > 0 && (
+                                        <div style={{ fontSize: '12px', color: 'var(--gray-400)', marginTop: '4px' }}>
+                                            🏢 {getBuildingName(floor.building_id)}
+                                        </div>
                                     )}
                                 </div>
                                 <span className="badge badge-blue">
@@ -168,7 +245,7 @@ export default function Floors() {
 
                             <div className="floor-card-stats">
                                 <div>
-                                    <span style={{ fontWeight: 600 }}>{floor.rooms?.length || 0}</span> Rooms
+                                    <span style={{ fontWeight: 600 }}>{floor.total_rooms || 0}</span> Rooms
                                 </div>
                                 <div>
                                     <span style={{ fontWeight: 600 }}>{floor.total_toilets}</span> Toilets
@@ -214,6 +291,26 @@ export default function Floors() {
                 title={editingFloor ? 'Edit Floor' : 'Add New Floor'}
             >
                 <form onSubmit={handleSubmit}>
+                    {/* Building Selection */}
+                    {buildings.length > 0 && (
+                        <div className="form-group">
+                            <label className="form-label">Building *</label>
+                            <select
+                                className="form-select"
+                                value={formData.building_id}
+                                onChange={(e) => setFormData({ ...formData, building_id: e.target.value })}
+                                required
+                            >
+                                <option value="">Select Building</option>
+                                {buildings.map(building => (
+                                    <option key={building.id} value={building.id}>
+                                        {building.name} ({building.code})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
                     <div className="form-row">
                         <div className="form-group">
                             <label className="form-label">Floor Number</label>

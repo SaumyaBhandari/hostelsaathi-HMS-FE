@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import MapLocationPicker from '../components/MapLocationPicker';
 
 export default function Register() {
     const [step, setStep] = useState(1);
@@ -14,6 +15,8 @@ export default function Register() {
         owner_phone: '',
         address_line1: '',
         city: '',
+        latitude: null,
+        longitude: null,
         password: '',
         confirm_password: '',
     });
@@ -80,6 +83,8 @@ export default function Register() {
                 owner_phone: formData.owner_phone,
                 address_line1: formData.address_line1,
                 city: formData.city,
+                latitude: formData.latitude,
+                longitude: formData.longitude,
                 contact_phone: formData.contact_phone || formData.owner_phone,
             });
             navigate('/');
@@ -228,6 +233,28 @@ export default function Register() {
                                         ))}
                                     </select>
                                     <small className="form-hint">Floors will be auto-created (Ground, First, Second...)</small>
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">📍 Hostel Location</label>
+                                    <small className="form-hint" style={{ display: 'block', marginBottom: '8px' }}>
+                                        Click on the map or search to set your hostel's exact location (address will auto-fill)
+                                    </small>
+                                    <MapLocationPicker
+                                        latitude={formData.latitude}
+                                        longitude={formData.longitude}
+                                        onLocationChange={(lat, lng) => setFormData({ ...formData, latitude: lat, longitude: lng })}
+                                        onAddressChange={(addr) => {
+                                            // Auto-fill address fields from map selection
+                                            const addressParts = [addr.road, addr.neighbourhood].filter(Boolean).join(', ');
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                address_line1: addressParts || prev.address_line1,
+                                                city: addr.city || prev.city,
+                                            }));
+                                        }}
+                                        height="250px"
+                                    />
                                 </div>
 
                                 <button type="button" className="btn btn-primary btn-lg" style={{ width: '100%' }} onClick={nextStep}>

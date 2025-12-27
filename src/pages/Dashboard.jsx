@@ -201,6 +201,70 @@ export default function Dashboard() {
                 </div>
             </div>
 
+            {/* Room Availability Overview */}
+            <div className="section">
+                <div className="section-header">
+                    <h2 className="section-title">🏢 Room Availability</h2>
+                    <Link to="/rooms" className="btn btn-ghost btn-sm">View All Rooms →</Link>
+                </div>
+                <div className="card">
+                    <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: 'var(--success-500)' }} />
+                            <span>Available ({stats?.vacant_beds || 0} beds)</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: 'var(--warning-500)' }} />
+                            <span>Nearly Full</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: 'var(--danger-500)' }} />
+                            <span>Full</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: 'var(--purple-500, #9333ea)' }} />
+                            <span>Temp Away</span>
+                        </div>
+                    </div>
+                    <div style={{ marginTop: '16px', color: 'var(--gray-600)', fontSize: '14px' }}>
+                        <strong>{stats?.total_rooms || 0}</strong> rooms across <strong>{stats?.total_floors || 0}</strong> floors •
+                        <strong style={{ color: 'var(--primary-600)', marginLeft: '4px' }}>{stats?.occupancy_rate || 0}%</strong> occupancy
+                    </div>
+                </div>
+            </div>
+
+            {/* Upcoming Payment Dues */}
+            {((stats?.due_payments || 0) + (stats?.overdue_payments || 0)) > 0 && (
+                <div className="section">
+                    <div className="section-header">
+                        <h2 className="section-title">⚠️ Upcoming Payment Dues</h2>
+                        <Link to="/payments" className="btn btn-ghost btn-sm">View All Payments →</Link>
+                    </div>
+                    <div className="card" style={{ background: 'var(--warning-50)', border: '1px solid var(--warning-200)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                            <div>
+                                <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--warning-600)' }}>
+                                    {(stats?.due_payments || 0) + (stats?.overdue_payments || 0)} students
+                                </div>
+                                <div style={{ color: 'var(--warning-700)', marginTop: '4px' }}>
+                                    have pending payments totaling Rs. {(stats?.pending_revenue || 0).toLocaleString()}
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <div style={{ textAlign: 'center', padding: '12px 16px', background: 'white', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--warning-600)' }}>{stats?.due_payments || 0}</div>
+                                    <div style={{ fontSize: '12px', color: 'var(--gray-600)' }}>Due</div>
+                                </div>
+                                <div style={{ textAlign: 'center', padding: '12px 16px', background: 'white', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--danger-600)' }}>{stats?.overdue_payments || 0}</div>
+                                    <div style={{ fontSize: '12px', color: 'var(--gray-600)' }}>Overdue</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Overview Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-6)' }}>
                 <div className="card">

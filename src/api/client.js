@@ -89,9 +89,35 @@ export const api = {
       }),
   },
 
+  // Buildings
+  buildings: {
+    list: () => request('/buildings'),
+    listBrief: () => request('/buildings/brief'),
+    get: (id) => request(`/buildings/${id}`),
+    create: (data) =>
+      request('/buildings', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id, data) =>
+      request(`/buildings/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    delete: (id) =>
+      request(`/buildings/${id}`, {
+        method: 'DELETE',
+      }),
+  },
+
   // Floors
   floors: {
-    list: () => request('/floors'),
+    list: (params = {}) => {
+      const query = new URLSearchParams();
+      if (params.building_id) query.append('building_id', params.building_id);
+      const queryStr = query.toString();
+      return request(`/floors${queryStr ? `?${queryStr}` : ''}`);
+    },
     get: (id) => request(`/floors/${id}`),
     create: (data) =>
       request('/floors', {
