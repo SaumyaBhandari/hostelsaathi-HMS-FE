@@ -386,18 +386,24 @@ function RoomCard({ room }) {
             </div>
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                 {beds.length > 0 ? (
-                    beds.map((bed, idx) => (
-                        <div
-                            key={bed.id || idx}
-                            title={`Bed ${bed.bed_number}: ${bed.status}${bed.current_student ? ` - ${bed.current_student.full_name}` : ''}`}
-                            style={{
-                                width: '16px',
-                                height: '16px',
-                                borderRadius: '50%',
-                                background: BED_COLORS[bed.status?.toLowerCase()] || 'var(--gray-300)',
-                            }}
-                        />
-                    ))
+                    beds.map((bed, idx) => {
+                        // Normalize status: lowercase, handle null/undefined
+                        const status = (bed.status || 'vacant').toLowerCase().replace('_', '_');
+                        const color = BED_COLORS[status] || BED_COLORS.vacant;
+                        const student = bed.current_student || bed.student;
+                        return (
+                            <div
+                                key={bed.id || idx}
+                                title={`Bed ${bed.bed_number}: ${status}${student ? ` - ${student.full_name || student.name}` : ''}`}
+                                style={{
+                                    width: '16px',
+                                    height: '16px',
+                                    borderRadius: '50%',
+                                    background: color,
+                                }}
+                            />
+                        );
+                    })
                 ) : (
                     // Show placeholder beds based on capacity
                     Array.from({ length: totalBeds }).map((_, idx) => (

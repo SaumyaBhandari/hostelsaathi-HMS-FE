@@ -8,7 +8,6 @@ export default function Register() {
     const [formData, setFormData] = useState({
         hostel_name: '',
         hostel_type: 'BOYS',
-        total_buildings: 1,
         contact_email: '',
         contact_phone: '',
         owner_name: '',
@@ -221,21 +220,6 @@ export default function Register() {
                                 </div>
 
                                 <div className="form-group">
-                                    <label className="form-label">Number of Buildings</label>
-                                    <select
-                                        name="total_buildings"
-                                        className="form-select"
-                                        value={formData.total_buildings}
-                                        onChange={(e) => setFormData({ ...formData, total_buildings: parseInt(e.target.value) })}
-                                    >
-                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-                                            <option key={n} value={n}>{n} Building{n > 1 ? 's' : ''}</option>
-                                        ))}
-                                    </select>
-                                    <small className="form-hint">Buildings will be auto-created (Main Building, or Block A, B, C...)</small>
-                                </div>
-
-                                <div className="form-group">
                                     <label className="form-label">📍 Hostel Location</label>
                                     <small className="form-hint" style={{ display: 'block', marginBottom: '8px' }}>
                                         Click on the map or search to set your hostel's exact location (address will auto-fill)
@@ -383,7 +367,7 @@ export default function Register() {
                         Already have an account? <Link to="/login">Sign in</Link>
                     </div>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }
