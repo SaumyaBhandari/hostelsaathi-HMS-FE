@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import Modal from '../components/Modal';
 import WebcamCapture from '../components/WebcamCapture';
+import StudentProfileModal from '../components/StudentProfileModal';
 
 // Nepal pricing constants
 const PRICING = {
@@ -16,6 +17,7 @@ export default function Students() {
     const [error, setError] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+    const [showProfileModal, setShowProfileModal] = useState(false);
     const [showWebcam, setShowWebcam] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -143,13 +145,19 @@ export default function Students() {
         setShowModal(true);
     };
 
-    const openCheckoutModal = (student) => {
+    const openCheckoutModal = (e, student) => {
+        e.stopPropagation(); // Prevent opening profile modal
         setSelectedStudent(student);
         setCheckoutData({
             checkout_date: new Date().toISOString().split('T')[0],
             refund_deposit: true,
         });
         setShowCheckoutModal(true);
+    };
+
+    const handleStudentClick = (student) => {
+        setSelectedStudent(student);
+        setShowProfileModal(true);
     };
 
     const handleBedChange = (bedId) => {
@@ -302,7 +310,12 @@ export default function Students() {
                                 {filteredStudents.map((student) => {
                                     const paymentStatus = getPaymentStatus(student);
                                     return (
-                                        <tr key={student.id}>
+                                        <tr
+                                            key={student.id}
+                                            onClick={() => handleStudentClick(student)}
+                                            style={{ cursor: 'pointer', transition: 'background 0.2s' }}
+                                            className="hover:bg-gray-50"
+                                        >
                                             <td>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                     <div style={{
@@ -372,7 +385,7 @@ export default function Students() {
                                                         <button
                                                             className="btn btn-ghost btn-sm"
                                                             style={{ color: 'var(--danger-500)' }}
-                                                            onClick={() => openCheckoutModal(student)}
+                                                            onClick={(e) => openCheckoutModal(e, student)}
                                                         >
                                                             Checkout
                                                         </button>
@@ -387,6 +400,14 @@ export default function Students() {
                     </div>
                 </div>
             )}
+
+            {/* Student Profile Modal */}
+            <StudentProfileModal
+                isOpen={showProfileModal}
+                onClose={() => setShowProfileModal(false)}
+                studentId={selectedStudent?.id}
+                onUpdate={loadData}
+            />
 
             {/* New Admission Modal */}
             <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="New Student Admission" size="lg">
