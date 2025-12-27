@@ -8,7 +8,7 @@ export default function Register() {
     const [formData, setFormData] = useState({
         hostel_name: '',
         hostel_type: 'BOYS',
-        total_floors: 4,
+        total_buildings: 1,
         contact_email: '',
         contact_phone: '',
         owner_name: '',
@@ -221,18 +221,18 @@ export default function Register() {
                                 </div>
 
                                 <div className="form-group">
-                                    <label className="form-label">Total Floors</label>
+                                    <label className="form-label">Number of Buildings</label>
                                     <select
-                                        name="total_floors"
+                                        name="total_buildings"
                                         className="form-select"
-                                        value={formData.total_floors}
-                                        onChange={(e) => setFormData({ ...formData, total_floors: parseInt(e.target.value) })}
+                                        value={formData.total_buildings}
+                                        onChange={(e) => setFormData({ ...formData, total_buildings: parseInt(e.target.value) })}
                                     >
                                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-                                            <option key={n} value={n}>{n} Floor{n > 1 ? 's' : ''}</option>
+                                            <option key={n} value={n}>{n} Building{n > 1 ? 's' : ''}</option>
                                         ))}
                                     </select>
-                                    <small className="form-hint">Floors will be auto-created (Ground, First, Second...)</small>
+                                    <small className="form-hint">Buildings will be auto-created (Main Building, or Block A, B, C...)</small>
                                 </div>
 
                                 <div className="form-group">
