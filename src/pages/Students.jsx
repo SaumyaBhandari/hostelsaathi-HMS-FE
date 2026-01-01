@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import Modal from '../components/Modal';
 import WebcamCapture from '../components/WebcamCapture';
 import StudentProfileModal from '../components/StudentProfileModal';
 import StudentRegistrationWizard from '../components/StudentRegistrationWizard';
+
+// Backend API base URL for static files
+const API_BASE = 'http://localhost:8000';
 
 // Nepal pricing constants
 const PRICING = {
@@ -12,6 +16,7 @@ const PRICING = {
 };
 
 export default function Students() {
+    const navigate = useNavigate();
     const [students, setStudents] = useState([]);
     const [vacantBeds, setVacantBeds] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -24,6 +29,13 @@ export default function Students() {
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('active');
+
+    // Helper to get full photo URL
+    const getPhotoUrl = (path) => {
+        if (!path) return null;
+        if (path.startsWith('http')) return path;
+        return `${API_BASE}${path}`;
+    };
 
     const [formData, setFormData] = useState({
         full_name: '',
@@ -300,24 +312,30 @@ export default function Students() {
                                 <tr>
                                     <th>Student</th>
                                     <th>Location</th>
-                                    <th>Payment Status</th>
-                                    <th>Rent</th>
+                                    <th>Payment</th>
                                     <th>Diet</th>
-                                    <th>Admission</th>
                                     <th>Status</th>
-                                    <th style={{ width: '120px' }}>Actions</th>
+                                    <th style={{ width: '100px' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filteredStudents.map((student) => {
-                                    const paymentStatus = getPaymentStatus(student);
+                                    const photoUrl = getPhotoUrl(student.photo_path);
+                                    const hasPendingAmount = student.pending_amount > 0;
+                                    const isDueSoon = student.days_until_due !== null && student.days_until_due <= 7 && student.days_until_due > 0;
+                                    const isOverdue = student.days_until_due !== null && student.days_until_due <= 0;
+
                                     return (
                                         <tr
                                             key={student.id}
                                             onClick={() => handleStudentClick(student)}
-                                            style={{ cursor: 'pointer', transition: 'background 0.2s' }}
-                                            className="hover:bg-gray-50"
+                                            style={{
+                                                cursor: 'pointer',
+                                                transition: 'background 0.2s',
+                                                background: isOverdue ? 'var(--danger-50)' : isDueSoon ? 'var(--warning-50)' : 'transparent'
+                                            }}
                                         >
+                                            {/* Student Photo & Name */}
                                             <td>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                     <div style={{
@@ -330,8 +348,8 @@ export default function Students() {
                                                         justifyContent: 'center',
                                                         overflow: 'hidden'
                                                     }}>
-                                                        {student.photo_path ? (
-                                                            <img src={student.photo_path} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        {photoUrl ? (
+                                                            <img src={photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                         ) : (
                                                             <span style={{ fontSize: '16px' }}>👤</span>
                                                         )}
@@ -342,45 +360,90 @@ export default function Students() {
                                                     </div>
                                                 </div>
                                             </td>
+
+                                            {/* Location Breadcrumb */}
                                             <td>
-                                                {student.room_number ? (
-                                                    <div>
-                                                        <div style={{ fontWeight: 500 }}>Room {student.room_number}</div>
-                                                        <div style={{ fontSize: '12px', color: 'var(--gray-500)' }}>Bed {student.bed_number || 'A'}</div>
+                                                {student.building_name ? (
+                                                    <div style={{ fontSize: '13px' }}>
+                                                        <span
+                                                            onClick={(e) => { e.stopPropagation(); navigate(`/property?building=${student.building_id}`); }}
+                                                            style={{ color: 'var(--primary-600)', cursor: 'pointer' }}
+                                                        >
+                                                            {student.building_code || student.building_name}
+                                                        </span>
+                                                        <span style={{ color: 'var(--gray-400)', margin: '0 4px' }}>›</span>
+                                                        <span
+                                                            onClick={(e) => { e.stopPropagation(); navigate(`/property?floor=${student.floor_id}`); }}
+                                                            style={{ color: 'var(--primary-600)', cursor: 'pointer' }}
+                                                        >
+                                                            {student.floor_name || `Floor ${student.floor_number}`}
+                                                        </span>
+                                                        <span style={{ color: 'var(--gray-400)', margin: '0 4px' }}>›</span>
+                                                        <span
+                                                            onClick={(e) => { e.stopPropagation(); navigate(`/property?room=${student.room_id}`); }}
+                                                            style={{ color: 'var(--primary-600)', cursor: 'pointer' }}
+                                                        >
+                                                            Room {student.room_number}
+                                                        </span>
+                                                        {student.room_type && (
+                                                            <span style={{ color: 'var(--gray-400)', fontSize: '11px' }}> ({student.room_type})</span>
+                                                        )}
+                                                        <div style={{ fontSize: '11px', color: 'var(--gray-500)', marginTop: '2px' }}>
+                                                            Bed {student.bed_number || 'A'}
+                                                        </div>
                                                     </div>
                                                 ) : (
-                                                    <span style={{ color: 'var(--gray-400)' }}>-</span>
+                                                    <span style={{ color: 'var(--gray-400)' }}>Not assigned</span>
                                                 )}
                                             </td>
+
+                                            {/* Payment Status + Pending Amount */}
                                             <td>
-                                                <span className={getPaymentBadgeClass(paymentStatus)}>
-                                                    {paymentStatus === 'paid' && '✓ Paid'}
-                                                    {paymentStatus === 'pending' && '⏳ Pending'}
-                                                    {paymentStatus === 'warning' && '⚠️ Due Soon'}
-                                                    {paymentStatus === 'expired' && '❌ Expired'}
-                                                </span>
-                                                {student.last_payment_date && (
+                                                <div style={{ fontWeight: 600, color: 'var(--primary-600)' }}>
+                                                    Rs. {Number(student.monthly_rent || 0).toLocaleString()}/mo
+                                                </div>
+                                                {hasPendingAmount ? (
+                                                    <div style={{
+                                                        fontSize: '12px',
+                                                        color: isOverdue ? 'var(--danger-600)' : 'var(--warning-600)',
+                                                        fontWeight: 600,
+                                                        marginTop: '2px'
+                                                    }}>
+                                                        {isOverdue ? '❌ Overdue: ' : '⏳ Pending: '}
+                                                        Rs. {Number(student.pending_amount).toLocaleString()}
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ fontSize: '12px', color: 'var(--success-600)', marginTop: '2px' }}>
+                                                        ✓ Paid
+                                                    </div>
+                                                )}
+                                                {student.next_due_date && (
                                                     <div style={{ fontSize: '11px', color: 'var(--gray-500)', marginTop: '2px' }}>
-                                                        Last: {new Date(student.last_payment_date).toLocaleDateString()}
+                                                        Due: {new Date(student.next_due_date).toLocaleDateString()}
                                                     </div>
                                                 )}
                                             </td>
-                                            <td>
-                                                <div style={{ fontWeight: 600, color: 'var(--primary-600)' }}>
-                                                    Rs. {student.monthly_rent?.toLocaleString() || '0'}
-                                                </div>
-                                            </td>
+
+                                            {/* Dietary Preference */}
                                             <td>
                                                 <span className="badge badge-gray" style={{ textTransform: 'capitalize' }}>
                                                     {student.dietary_preference === 'veg' ? '🥬' : '🍗'} {student.dietary_preference || 'Veg'}
                                                 </span>
                                             </td>
-                                            <td>{student.admission_date ? new Date(student.admission_date).toLocaleDateString() : '-'}</td>
+
+                                            {/* Status */}
                                             <td>
                                                 <span className={`badge ${getStatusBadge(student.status)}`}>
                                                     {student.status?.replace('_', ' ')}
                                                 </span>
+                                                {student.id_verification_status === 'unverified' && (
+                                                    <div style={{ fontSize: '10px', color: 'var(--warning-600)', marginTop: '2px' }}>
+                                                        ⚠️ ID Unverified
+                                                    </div>
+                                                )}
                                             </td>
+
+                                            {/* Actions */}
                                             <td>
                                                 <div style={{ display: 'flex', gap: '8px' }}>
                                                     {(student.status === 'ACTIVE' || student.status === 'active') && (

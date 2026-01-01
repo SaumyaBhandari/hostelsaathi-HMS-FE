@@ -55,6 +55,8 @@ export default function Dashboard() {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [hostel, setHostel] = useState(null);
+    const [financialSummary, setFinancialSummary] = useState(null);
+    const [pendingStudents, setPendingStudents] = useState([]);
 
     useEffect(() => {
         loadData();
@@ -68,6 +70,18 @@ export default function Dashboard() {
             ]);
             setStats(statsData);
             setHostel(hostelData);
+
+            // Load financial data separately (don't block main dashboard load)
+            try {
+                const [financial, pending] = await Promise.all([
+                    api.financial.summary(),
+                    api.financial.pendingStudents(5),
+                ]);
+                setFinancialSummary(financial);
+                setPendingStudents(pending);
+            } catch (err) {
+                console.error('Failed to load financial data:', err);
+            }
         } catch (err) {
             console.error('Failed to load dashboard:', err);
         } finally {
@@ -233,34 +247,96 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Upcoming Payment Dues */}
-            {((stats?.due_payments || 0) + (stats?.overdue_payments || 0)) > 0 && (
+            {/* Financial Summary Section */}
+            <div className="section">
+                <div className="section-header">
+                    <h2 className="section-title">💰 Financial Summary - {financialSummary?.month_name || 'This Month'}</h2>
+                    <Link to="/payments" className="btn btn-ghost btn-sm">Manage Payments →</Link>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                    <div className="card" style={{ padding: '16px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--success-600)' }}>
+                            Rs. {(financialSummary?.total_collected || stats?.revenue_this_month || 0).toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: '13px', color: 'var(--gray-600)', marginTop: '4px' }}>Collected</div>
+                        <div style={{ fontSize: '11px', color: 'var(--gray-500)', marginTop: '2px' }}>
+                            {financialSummary?.payments_count || 0} payments
+                        </div>
+                    </div>
+                    <div className="card" style={{ padding: '16px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--warning-600)' }}>
+                            Rs. {(financialSummary?.total_pending || 0).toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: '13px', color: 'var(--gray-600)', marginTop: '4px' }}>Pending</div>
+                        <div style={{ fontSize: '11px', color: 'var(--gray-500)', marginTop: '2px' }}>
+                            {financialSummary?.pending_count || 0} invoices
+                        </div>
+                    </div>
+                    <div className="card" style={{ padding: '16px', textAlign: 'center', background: financialSummary?.overdue_count > 0 ? 'var(--danger-50)' : 'white' }}>
+                        <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--danger-600)' }}>
+                            Rs. {(financialSummary?.total_overdue || 0).toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: '13px', color: 'var(--gray-600)', marginTop: '4px' }}>Overdue</div>
+                        <div style={{ fontSize: '11px', color: 'var(--gray-500)', marginTop: '2px' }}>
+                            {financialSummary?.overdue_count || 0} students
+                        </div>
+                    </div>
+                    <div className="card" style={{ padding: '16px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--primary-600)' }}>
+                            {financialSummary?.collection_rate || 0}%
+                        </div>
+                        <div style={{ fontSize: '13px', color: 'var(--gray-600)', marginTop: '4px' }}>Collection Rate</div>
+                        <div style={{ fontSize: '11px', color: 'var(--gray-500)', marginTop: '2px' }}>
+                            Expected: Rs. {(financialSummary?.expected_monthly_revenue || 0).toLocaleString()}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Students with Upcoming/Overdue Payments */}
+            {pendingStudents.length > 0 && (
                 <div className="section">
                     <div className="section-header">
-                        <h2 className="section-title">⚠️ Upcoming Payment Dues</h2>
-                        <Link to="/payments" className="btn btn-ghost btn-sm">View All Payments →</Link>
+                        <h2 className="section-title">⚠️ Students with Due Payments</h2>
+                        <Link to="/students" className="btn btn-ghost btn-sm">View All Students →</Link>
                     </div>
-                    <div className="card" style={{ background: 'var(--warning-50)', border: '1px solid var(--warning-200)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-                            <div>
-                                <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--warning-600)' }}>
-                                    {(stats?.due_payments || 0) + (stats?.overdue_payments || 0)} students
-                                </div>
-                                <div style={{ color: 'var(--warning-700)', marginTop: '4px' }}>
-                                    have pending payments totaling Rs. {(stats?.pending_revenue || 0).toLocaleString()}
-                                </div>
-                            </div>
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <div style={{ textAlign: 'center', padding: '12px 16px', background: 'white', borderRadius: '8px' }}>
-                                    <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--warning-600)' }}>{stats?.due_payments || 0}</div>
-                                    <div style={{ fontSize: '12px', color: 'var(--gray-600)' }}>Due</div>
-                                </div>
-                                <div style={{ textAlign: 'center', padding: '12px 16px', background: 'white', borderRadius: '8px' }}>
-                                    <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--danger-600)' }}>{stats?.overdue_payments || 0}</div>
-                                    <div style={{ fontSize: '12px', color: 'var(--gray-600)' }}>Overdue</div>
-                                </div>
-                            </div>
-                        </div>
+                    <div className="card">
+                        <table className="table" style={{ fontSize: '14px' }}>
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Monthly Rent</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {pendingStudents.map(student => (
+                                    <tr
+                                        key={student.id}
+                                        style={{ background: student.is_overdue ? 'var(--danger-50)' : 'transparent' }}
+                                    >
+                                        <td>
+                                            <div style={{ fontWeight: 600 }}>{student.full_name}</div>
+                                            <div style={{ fontSize: '12px', color: 'var(--gray-500)' }}>{student.phone}</div>
+                                        </td>
+                                        <td style={{ fontWeight: 600, color: 'var(--primary-600)' }}>
+                                            Rs. {student.monthly_rent?.toLocaleString()}
+                                        </td>
+                                        <td>
+                                            {student.next_due_date ? new Date(student.next_due_date).toLocaleDateString() : '-'}
+                                        </td>
+                                        <td>
+                                            {student.is_overdue ? (
+                                                <span className="badge badge-red">❌ Overdue {Math.abs(student.days_until_due)} days</span>
+                                            ) : (
+                                                <span className="badge badge-yellow">⏳ Due in {student.days_until_due} days</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             )}

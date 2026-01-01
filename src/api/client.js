@@ -27,6 +27,15 @@ async function request(endpoint, options = {}) {
   const data = await response.json();
 
   if (!response.ok) {
+    // Handle FastAPI validation errors (detail is an array)
+    if (Array.isArray(data.detail)) {
+      const messages = data.detail.map(err => {
+        const field = err.loc?.slice(-1)[0] || 'Unknown field';
+        return `${field}: ${err.msg}`;
+      });
+      throw new Error(messages.join(', '));
+    }
+    // Handle string detail
     throw new Error(data.detail || 'Request failed');
   }
 
@@ -265,6 +274,29 @@ export const api = {
           body: JSON.stringify({ reason }),
         }),
     },
+    // New Payment Methods
+    getBillingStatus: (studentId) =>
+      request(`/students/${studentId}/billing-status`),
+    recordMonthlyPayment: (studentId, data = {}) =>
+      request(`/students/${studentId}/payments/monthly`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    recordExtraPayment: (studentId, data) =>
+      request(`/students/${studentId}/payments/extra`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    verifyId: (studentId, data) =>
+      request(`/students/${studentId}/verify-id`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    completePayment: (studentId, data) =>
+      request(`/students/${studentId}/payments/complete`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 
   // Payments
@@ -331,6 +363,15 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ email }),
       }),
+  },
+
+  // Financial Summary
+  financial: {
+    summary: (params = {}) => {
+      const query = new URLSearchParams(params).toString();
+      return request(`/financial/summary${query ? `?${query}` : ''}`);
+    },
+    pendingStudents: (limit = 10) => request(`/financial/pending-students?limit=${limit}`),
   },
 };
 
